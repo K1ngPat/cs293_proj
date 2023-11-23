@@ -1,6 +1,163 @@
 #include "receiver.h"
 #include <vector>
 
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class binaryHeap{
+
+    public:
+
+        // dynamic array so we'll never
+        // run out of elements :)
+        vector<int> _arr;
+
+        int parent(int i) { return i/2; }
+
+        void heapify_up(int i) {
+
+            // iterate until reached index 0
+            while(i > 0) {
+                if(_arr[parent(i)] > _arr[i]) {
+
+                    // if parent key is higher than current key
+                    // then fix it by swapping both of it
+                    int tmp = _arr[parent(i)];
+                    _arr[parent(i)] = _arr[i];
+                    _arr[i] = tmp;
+                }
+                i = parent(i);
+            }
+        }
+
+        void heapify_down(int i) {
+
+            // fix bin heap structure after deletion
+            while(i < _arr.size()-1) {
+
+                int i_min = _arr[i*2] > _arr[i*2+1] ? i*2+1 : i*2;
+
+                // continuously fix the heap tree by
+                // swapping if node's childrens is lower than current node
+                if(_arr[i] > _arr[i_min]) {
+                    int tmp = _arr[i];
+                    _arr[i] = _arr[i_min];
+                    _arr[i_min] = tmp;
+                }
+
+                i = i_min;
+            }
+
+        }
+
+    public:
+
+        binaryHeap() {
+            _arr.reserve(20);
+            _arr.push_back(0);
+        }
+
+
+        void insert(int key) {
+            _arr.push_back(key);
+            heapify_up(_arr.size()-1);
+        }
+
+        int extractMin() {
+
+            // move last key in array to root
+            int tmp = _arr[1]; // store value before remove
+            _arr[1] = _arr[_arr.size()-1];
+
+            // after moved last to front, then remove that value
+            _arr.pop_back();
+
+            // fix tree heap property back
+            heapify_down(1);
+
+            return tmp;
+        }
+
+        void debug_print() {
+            for(int i = 0; i <= _arr.size()-1; i++) {
+                cout << _arr[i] << ' ';
+            }
+            cout << endl;
+        }
+
+};
+
+
+
+class runningMedian{
+    private:
+    binaryHeap negLesser;
+    binaryHeap greater;
+
+    public:
+    double getMedian()
+    {
+
+        while(greater._arr.size() + 1 < negLesser._arr.size())
+        {
+            greater.insert(-1*negLesser.extractMin());
+        }
+
+        while(negLesser._arr.size() + 1 < greater._arr.size())
+        {
+            negLesser.insert(-1*greater.extractMin());
+        }
+
+        if(negLesser._arr.size()==greater._arr.size())
+        {
+            int a = greater.extractMin();
+            greater.insert(a);
+            int b = -1 * negLesser.extractMin();
+            negLesser.insert(-1*b);
+            return (a+b)/2.0;
+        }
+        else if(negLesser._arr.size()==1+greater._arr.size())
+        {
+            
+            int b = -1 * negLesser.extractMin();
+            negLesser.insert(-1*b);
+            return (double)b;
+        }
+        else if(negLesser._arr.size()+1==greater._arr.size())
+        {
+            int a = greater.extractMin();
+            greater.insert(a);
+            return (double)a;
+        }
+        else
+        {
+            std::cout<<"median stream aint working"<<std::endl;
+        }
+
+    }
+    void newElement(int i)
+    {
+        if(i >= getMedian())
+        {
+            greater.insert(i);
+        }
+        else
+        {
+            negLesser.insert(-1*i);
+        }
+    }
+};
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 static inline void ReplaceChar(std::string &str, const std::string& from, const std::string& to)
 {
     size_t start_pos = 0;
@@ -83,7 +240,248 @@ long pow(long base, long exponent) {
     }
 }
 
-std::vector<int> maxLinearComb(std::vector<std::vector<int>> hist, std::vector<int> prius)
+std::vector<int> maxUptoLinearComb(std::vector<std::vector<int>> &hist, std::vector<int> &prius, std::vector<int> &quantis)
+{   
+    // TODO: Complete
+    
+    /*
+        Weird return format, returns vector of quantity for each trade taken, and an extra element at end containing profit
+    */
+    int profit = 0;
+    std::vector<int> retvalue;
+    int dictsize = hist[hist.size()-1].size();              // techincally hist should be rectangle
+    long treesize = 1;
+    for (size_t i = 0; i < quantis.size(); i++)
+    {
+        treesize *= (quantis[i]+1);
+    }
+    
+
+    // std::cout<<treesize<<std::endl;
+
+    for(long i = 1; i < treesize; i++)
+    {
+        std::vector<int> temptrads;
+        int tempret = 0;
+        bool valid_arbitrage = false;
+        bool thisvalid;
+        int hld = i;
+        int pgg = 0;
+        while (hld > 0) 
+        {
+
+            temptrads.push_back(hld % (quantis[pgg]+1));
+            hld /= (quantis[pgg++]+1);
+        
+        }
+
+        for(int pkl=temptrads.size(); pkl<hist.size(); pkl++)
+        {
+            temptrads.push_back(0);
+        }
+        // for(int pkl=0; pkl<temptrads.size(); pkl++)
+        // {
+        //     std::cout<<temptrads[pkl];
+        // }
+        // std::cout<<std::endl;
+
+        for(int p=0; p<dictsize; p++)
+        {   int chckr = 0;
+            thisvalid = true;
+            for(int j = 0; j<temptrads.size(); j++)
+            {
+                chckr += temptrads[j]*hist[j][p];
+            }
+            if(chckr != 0)
+            {
+                thisvalid = false;
+                break;
+            }
+        }
+        if(thisvalid)
+        {
+        
+            for(int j=0; j<temptrads.size(); j++)
+            {
+                tempret += prius[j] * temptrads[j];
+            }
+            if(tempret>=profit)
+            {
+                profit = tempret;
+                retvalue = temptrads;
+
+                valid_arbitrage = true;
+            }
+        }
+
+
+    }
+
+
+
+    for(int i = retvalue.size(); i < prius.size(); i++)
+    {
+        retvalue.push_back(0);
+    }
+    retvalue.push_back(profit);
+
+    return retvalue;
+
+}
+
+void part3() {
+
+    // Receiver rcv;
+    // //sleep(5);
+    // std::string message = rcv.readIML();
+    std::string message = "X 1 Y -1 10 2 b#\nZ -1 Y 1 -15 5 b#\nZ 1 X -1 10 4 b#\nG 1 X 1 10 5 s#\nZ 1 G 1 50 7 b#$";
+    ReplaceChar(message, std::string("\n"), std::string(" "));
+
+    if (!message.empty()) {
+        message.erase(message.size() - 1);
+    }
+    std::istringstream isis(message);
+    
+    std::vector<std::string> tokens;
+    std::string tok;
+    while (std::getline(isis, tok, ' ')) {
+        tokens.push_back(tok);
+    }
+
+    // for(int k = 0; k < tokens.size(); k++)
+    // {
+    //     std::cout<<tokens[k]<<std::endl;
+    // }
+
+    std::vector<std::string> dict;
+    std::vector<std::vector<int>> history;
+    std::vector<int> pricehist;
+    std::vector<int> trade_quantity;
+    std::vector<bool> isBuy;
+    
+    int i=0;
+
+    // std::cout<<isAlphabetic("Z")<<std::endl;
+
+    while(i<tokens.size()) 
+    {
+        
+            // std::cout<<tokens[i];
+            // for(char c: tokens[i])
+            // {
+            //     std::cout<<'^'<<int(c);
+
+            // } 
+            // std::cout<<std::endl;
+            
+            if(isAlphabetic(tokens[i]))
+            {
+                // std::cout<<tokens[i]<<std::endl;
+                if(findinvec(dict, tokens[i]) == -1)
+                {dict.push_back(tokens[i]);}
+            }
+            i++;
+
+    }
+
+    i = 0;
+    // for(int k = 0; k < dict.size(); k++)
+    // {
+    //     std::cout<<dict[k]<<std::endl;
+    // }
+    std::vector<int> curr(dict.size(), 0);
+
+    while(i<tokens.size()) 
+    {       
+
+        
+    
+    
+        if(isAlphabetic(tokens[i]) && isSignedNumeric(tokens[i+1]))
+        {
+            int j = findinvec(dict, tokens[i]);
+
+            // if(j == -1)                  // shouldnt be necessary
+            // {
+            //     j = dict.size();
+            //     dict.push_back(tokens[i]);
+            // }
+            curr[j] = parseInt(tokens[i+1]);
+            
+
+
+
+
+            
+        }
+
+        else
+        {   
+            
+            if(tokens[i+2][1] != '#')
+            {
+                std::cout << "We fucked up somewhere, hard. " << tokens[i] << " " << tokens[i+1] << std::endl;
+            }
+            
+            // for(int ppp=0; ppp<curr.size(); ppp++)
+            // {
+            //     std::cout<<curr[ppp];
+            // }
+            // std::cout<<std::endl;
+            history.push_back(curr);
+            pricehist.push_back(parseInt(tokens[i]));
+            trade_quantity.push_back(parseInt(tokens[i+1]));
+
+            if(tokens[i+2][0] == 's')       // must reverse all signs
+            {
+                isBuy.push_back(false);
+                pricehist[pricehist.size()-1] *= -1;
+
+                for(int jkl = 0; jkl<history[pricehist.size()-1].size(); jkl++)
+                {
+                    history[pricehist.size()-1][jkl] *= -1;
+                }
+            }
+            else
+            {
+                
+                isBuy.push_back(true);
+            }
+            for(int ij =0; ij<curr.size(); ij++)
+            {
+                curr[ij] = 0;
+            }
+            i+=1;
+        }
+
+        i += 2;
+
+    }
+
+    for(int k = 0; k < history.size(); k++)
+    {
+        for(int kk = 0; kk < history[k].size(); kk++)
+        {
+         
+            std::cout<<history[k][kk]*trade_quantity[k]<<" ";
+        }
+        std::cout<<"\t"<<pricehist[k]<<std::endl;
+    }
+    std::cout<<"aawwwwwwwwwwaaaa"<<std::endl;
+
+
+    std::vector<int> clc = maxUptoLinearComb(history, pricehist, trade_quantity);
+    for(int i=0; i<clc.size(); i++)
+    {
+        std::cout << clc[i] << '\n';
+    }
+
+
+    
+}
+
+
+std::vector<int> maxLinearComb(std::vector<std::vector<int>> &hist, std::vector<int> &prius)
 {
     
     /*
@@ -316,17 +714,17 @@ void part2() {
 
 
 
-int main() {
+// int main() {
 
-    // Receiver rcv;
-    // sleep(5);
-    // std::string message = rcv.readIML();
-    // std::cout << message;
+//     // Receiver rcv;
+//     // sleep(5);
+//     // std::string message = rcv.readIML();
+//     // std::cout << message;
 
-    part2();
+//     part2();
 
-    return 0;
-}
+//     return 0;
+// }
 
 int max(int a, int b){
     if(a > b){
@@ -905,6 +1303,6 @@ void part1(){
 }
 
 int main() {
-    part1();
+    part3();
     return 0;
 }
