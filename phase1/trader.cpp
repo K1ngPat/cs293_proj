@@ -305,7 +305,7 @@ std::vector<int> maxUptoLinearComb(std::vector<std::vector<int>> &hist, std::vec
             {
                 tempret += prius[j] * temptrads[j];
             }
-            if(tempret>=profit)
+            if(tempret>profit)
             {
                 profit = tempret;
                 retvalue = temptrads;
